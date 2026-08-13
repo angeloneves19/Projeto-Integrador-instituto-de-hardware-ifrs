@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import personagem from "../assets/personagem-2.png";
 function GoogleIcon() {
   return (
@@ -73,7 +74,7 @@ function TrustItem( { icon: Icon, title, subtitle } ) {
   );
 }
 export default function Login() {
-  const [dark, setDark] = useState( true );
+  const { dark, alternarTema } = useTheme();
   const [email, setEmail] = useState( "" );
   const [password, setPassword] = useState( "" );
   const [showPassword, setShowPassword] = useState( false );
@@ -81,9 +82,6 @@ export default function Login() {
   const [loading, setLoading] = useState( false );
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  useEffect( () => {
-    document.documentElement.classList.toggle( "dark", dark );
-  }, [dark] );
   async function handleSubmit( e ) {
     e.preventDefault();
     setError( "" );
@@ -101,9 +99,10 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 px-4 py-10 transition-colors">
       <div className="w-full max-w-6xl rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden relative transition-colors">
         <button
-          onClick={() => setDark( !dark )}
+          type="button"
+          onClick={alternarTema}
           className="absolute top-5 right-5 z-10 p-2 rounded-full border border-gray-200 dark:border-neutral-800 text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
-          aria-label="Alternar tema"
+          aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
         >
           {dark ? <Sun size={18} /> : <Moon size={18} />}
         </button>

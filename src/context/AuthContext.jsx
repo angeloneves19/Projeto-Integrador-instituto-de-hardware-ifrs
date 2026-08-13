@@ -20,6 +20,20 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  async function signUp(email, password, nomeCompleto, tipo) {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        // O trigger do banco lê esses campos de raw_user_meta_data
+        // para criar a linha em "profiles".
+        data: { nome_completo: nomeCompleto.trim(), tipo },
+      },
+    })
+    if (error) throw error
+    return data
+  }
+
   async function signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
@@ -31,7 +45,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

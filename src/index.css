@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/* Tailwind v4: por padrão o variante dark: responde só a
+   prefers-color-scheme. Isso faz ele responder à classe .dark no <html>,
+   que é o que o botão de alternar tema controla. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Alinha os controles nativos (scrollbar, inputs) ao tema escolhido. */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>domesticas-a-caminho</title>
+    <script>
+      // Aplica o tema antes da primeira pintura para não piscar o tema errado.
+      // Mesma regra de temaInicial() em src/context/ThemeContext.jsx.
+      (function () {
+        var tema;
+        try {
+          tema = localStorage.getItem('tema');
+        } catch (e) {
+          tema = null;
+        }
+        if (tema !== 'dark' && tema !== 'light') {
+          tema = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.classList.toggle('dark', tema === 'dark');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

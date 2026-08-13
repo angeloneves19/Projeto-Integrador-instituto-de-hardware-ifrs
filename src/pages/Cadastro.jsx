@@ -1,8 +1,45 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Home, Mail, Lock, User, CreditCard, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Home, Mail, Lock, User, CreditCard, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 import { supabase } from '../lib/supabaseClient.js'
+
+// Traduz o erro real do Supabase. Nunca inventa "já cadastrado":
+// só diz isso quando o servidor de fato reportou duplicidade.
+function mensagemDeErro(err) {
+  const code = err?.code
+  const status = err?.status
+  const msg = (err?.message || '').toLowerCase()
+
+  if (code === 'user_already_exists' || code === 'email_exists' || msg.includes('already registered')) {
+    return 'Esse e-mail já tem uma conta. Tente fazer login.'
+  }
+  if (code === '23505') {
+    return msg.includes('cpf')
+      ? 'Esse CPF já está cadastrado.'
+      : 'Esses dados já estão cadastrados.'
+  }
+  if (code === 'signup_disabled') {
+    return 'O cadastro está desativado no servidor. Habilite "Allow new users to sign up" no painel do Supabase (Authentication → Sign In / Providers).'
+  }
+  if (code === 'weak_password' || msg.includes('password should be')) {
+    return 'Senha muito fraca. Use pelo menos 6 caracteres.'
+  }
+  if (code === 'validation_failed' || msg.includes('invalid email')) {
+    return 'E-mail inválido. Confira o endereço digitado.'
+  }
+  if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || status === 429) {
+    return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.'
+  }
+  if (code === '42501' || code === '42P01') {
+    return 'Conta criada, mas o banco recusou salvar o perfil (permissão/tabela). Avise o administrador.'
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkerror')) {
+    return 'Não foi possível falar com o servidor. Verifique sua conexão.'
+  }
+  return `Não foi possível criar a conta: ${err?.message || 'erro desconhecido'}`
+}
 
 export default function Cadastro() {
   const [tipo, setTipo] = useState('cliente')
@@ -12,9 +49,11 @@ export default function Cadastro() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { signUp } = useAuth()
+  const { dark, alternarTema } = useTheme()
   const navigate = useNavigate()
 
   function formatCpf(value) {
@@ -25,9 +64,39 @@ export default function Cadastro() {
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
   }
 
+  // O trigger do banco deve criar a linha em "profiles" com nome/e-mail/tipo, e
+  // aqui completamos o CPF. Se o trigger não existir, criamos a linha inteira.
+  async function salvarPerfil(userId, cpfDigits) {
+    const { data: atualizados, error: updateError } = await supabase
+      .from('profiles')
+      .update({ cpf: cpfDigits })
+      .eq('id', userId)
+      .select('id')
+
+    if (updateError) throw updateError
+    if (atualizados?.length) return
+
+    const { error: insertError } = await supabase.from('profiles').insert({
+      id: userId,
+      nome_completo: nomeCompleto.trim(),
+      email: email.trim(),
+      cpf: cpfDigits,
+      tipo,
+    })
+
+    if (insertError) {
+      // Duplicidade que não é de CPF significa que a linha já existia (o update
+      // acima funcionou, mas a política de RLS não deixa ler de volta).
+      const detalhe = `${insertError.message} ${insertError.details || ''}`.toLowerCase()
+      const linhaJaExistia = insertError.code === '23505' && !detalhe.includes('cpf')
+      if (!linhaJaExistia) throw insertError
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setInfo('')
 
     const cpfDigits = cpf.replace(/\D/g, '')
     if (cpfDigits.length !== 11) {
@@ -43,21 +112,18 @@ export default function Cadastro() {
     try {
       const data = await signUp(email, password, nomeCompleto, tipo)
 
-      // O trigger do banco já criou a linha em "profiles" com nome/email/tipo.
-      // Agora completamos com o CPF (que não faz parte do trigger).
-      if (data?.user?.id) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ cpf: cpfDigits })
-          .eq('id', data.user.id)
-
-        if (updateError) throw updateError
+      // Sem sessão = o projeto exige confirmação de e-mail. Ainda não é possível
+      // gravar o perfil (RLS) nem abrir o painel.
+      if (!data?.session) {
+        setInfo('Conta criada! Confirme o e-mail que enviamos e depois faça login.')
+        return
       }
 
+      await salvarPerfil(data.user.id, cpfDigits)
       navigate('/dashboard')
     } catch (err) {
       console.error('Erro no cadastro:', err)
-      setError('Não foi possível criar a conta. Verifique os dados (talvez esse CPF ou e-mail já esteja cadastrado).')
+      setError(mensagemDeErro(err))
     } finally {
       setLoading(false)
     }
@@ -65,7 +131,16 @@ export default function Cadastro() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm p-8 sm:p-10">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm p-8 sm:p-10 relative">
+        <button
+          type="button"
+          onClick={alternarTema}
+          className="absolute top-5 right-5 z-10 p-2 rounded-full border border-gray-200 dark:border-neutral-800 text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors"
+          aria-label={dark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+        >
+          {dark ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0">
             <Home className="text-white" size={24} />
@@ -178,6 +253,11 @@ export default function Cadastro() {
           {error && (
             <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
               {error}
+            </p>
+          )}
+          {info && (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-lg px-3 py-2">
+              {info}
             </p>
           )}
           <button
