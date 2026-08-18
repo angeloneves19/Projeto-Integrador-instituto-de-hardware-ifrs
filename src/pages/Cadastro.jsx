@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Home, Mail, Lock, User, CreditCard, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
-import { supabase } from '../lib/supabaseClient.js'
 
 // Traduz o erro real do Supabase. Nunca inventa "já cadastrado":
 // só diz isso quando o servidor de fato reportou duplicidade.
@@ -64,35 +63,6 @@ export default function Cadastro() {
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
   }
 
-  // O trigger do banco deve criar a linha em "profiles" com nome/e-mail/tipo, e
-  // aqui completamos o CPF. Se o trigger não existir, criamos a linha inteira.
-  async function salvarPerfil(userId, cpfDigits) {
-    const { data: atualizados, error: updateError } = await supabase
-      .from('profiles')
-      .update({ cpf: cpfDigits })
-      .eq('id', userId)
-      .select('id')
-
-    if (updateError) throw updateError
-    if (atualizados?.length) return
-
-    const { error: insertError } = await supabase.from('profiles').insert({
-      id: userId,
-      nome_completo: nomeCompleto.trim(),
-      email: email.trim(),
-      cpf: cpfDigits,
-      tipo,
-    })
-
-    if (insertError) {
-      // Duplicidade que não é de CPF significa que a linha já existia (o update
-      // acima funcionou, mas a política de RLS não deixa ler de volta).
-      const detalhe = `${insertError.message} ${insertError.details || ''}`.toLowerCase()
-      const linhaJaExistia = insertError.code === '23505' && !detalhe.includes('cpf')
-      if (!linhaJaExistia) throw insertError
-    }
-  }
-
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -110,16 +80,17 @@ export default function Cadastro() {
 
     setLoading(true)
     try {
-      const data = await signUp(email, password, nomeCompleto, tipo)
+      // O gatilho do banco (handle_new_user) já cria a linha em "profiles"
+      // com nome, e-mail, tipo e CPF de uma vez só, lendo esses dados
+      // diretamente do cadastro. Não precisamos de um passo extra depois.
+      const data = await signUp(email, password, nomeCompleto, tipo, cpfDigits)
 
-      // Sem sessão = o projeto exige confirmação de e-mail. Ainda não é possível
-      // gravar o perfil (RLS) nem abrir o painel.
+      // Sem sessão = o projeto exige confirmação de e-mail.
       if (!data?.session) {
         setInfo('Conta criada! Confirme o e-mail que enviamos e depois faça login.')
         return
       }
 
-      await salvarPerfil(data.user.id, cpfDigits)
       navigate('/dashboard')
     } catch (err) {
       console.error('Erro no cadastro:', err)

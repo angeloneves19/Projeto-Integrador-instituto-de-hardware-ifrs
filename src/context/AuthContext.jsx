@@ -20,14 +20,14 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  async function signUp(email, password, nomeCompleto, tipo) {
+  async function signUp(email, password, nomeCompleto, tipo, cpf) {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
         // O trigger do banco lê esses campos de raw_user_meta_data
         // para criar a linha em "profiles".
-        data: { nome_completo: nomeCompleto.trim(), tipo },
+        data: { nome_completo: nomeCompleto.trim(), tipo, cpf },
       },
     })
     if (error) throw error
