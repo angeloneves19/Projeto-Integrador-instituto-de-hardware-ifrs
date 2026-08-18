@@ -35,6 +35,7 @@ export default function EditarPerfilProfissional() {
   const [bio, setBio] = useState('')
   const [anosExperiencia, setAnosExperiencia] = useState('')
   const [cidade, setCidade] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [valorDiaria, setValorDiaria] = useState('')
   const [valorMensalidade, setValorMensalidade] = useState('')
   const [regime, setRegime] = useState('diarista')
@@ -66,7 +67,7 @@ export default function EditarPerfilProfissional() {
 
     const { data: profileBase } = await supabase
       .from('profiles')
-      .select('cidade')
+      .select('cidade, telefone')
       .eq('id', session.user.id)
       .single()
 
@@ -79,6 +80,7 @@ export default function EditarPerfilProfissional() {
     setBio(perfilProf.bio || '')
     setAnosExperiencia(perfilProf.anos_experiencia?.toString() || '')
     setCidade(profileBase?.cidade || '')
+    setTelefone(profileBase?.telefone || '')
     setValorDiaria(perfilProf.valor_diaria?.toString() || '')
     setValorMensalidade(perfilProf.valor_mensalidade?.toString() || '')
     setRegime(perfilProf.regime || 'diarista')
@@ -127,12 +129,11 @@ export default function EditarPerfilProfissional() {
 
       const { error: erroCidade } = await supabase
         .from('profiles')
-        .update({ cidade: cidade.trim() || null })
+        .update({ cidade: cidade.trim() || null, telefone: telefone.trim() || null })
         .eq('id', session.user.id)
 
       if (erroCidade) throw erroCidade
 
-      // Especialidades: remove todas e insere de novo as selecionadas (mais simples que comparar diffs).
       const { error: erroDelete } = await supabase
         .from('especialidades_profissional')
         .delete()
@@ -202,6 +203,17 @@ export default function EditarPerfilProfissional() {
             className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="text-sm text-gray-700 dark:text-gray-300 mb-1.5 block">Telefone</label>
+        <input
+          type="tel"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          placeholder="(51) 99999-9999"
+          className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
       </div>
 
       <div>

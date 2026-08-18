@@ -7,6 +7,7 @@ import MeusPedidos from '../components/MeusPedidos.jsx'
 import NotificationBell from '../components/NotificationBell.jsx'
 import AgendaProfissional from '../components/AgendaProfissional.jsx'
 import EditarPerfilProfissional from '../components/EditarPerfilProfissional.jsx'
+import EditarPerfilCliente from '../components/EditarPerfilCliente.jsx'
 import { Loader2 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -105,9 +106,19 @@ export default function Dashboard() {
               >
                 Meus pedidos
               </button>
+              <button
+                onClick={() => setAba('perfil')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  aba === 'perfil'
+                    ? 'bg-emerald-600 dark:bg-emerald-400 text-white dark:text-neutral-900'
+                    : 'border border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-300'
+                }`}
+              >
+                Meu perfil
+              </button>
             </div>
 
-            {aba === 'buscar' ? <ListaProfissionais /> : <MeusPedidos />}
+            {aba === 'buscar' ? <ListaProfissionais /> : aba === 'pedidos' ? <MeusPedidos /> : <EditarPerfilCliente />}
           </>
         )}
       </div>

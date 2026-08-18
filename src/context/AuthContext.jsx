@@ -25,8 +25,6 @@ export function AuthProvider({ children }) {
       email: email.trim(),
       password,
       options: {
-        // O trigger do banco lê esses campos de raw_user_meta_data
-        // para criar a linha em "profiles".
         data: { nome_completo: nomeCompleto.trim(), tipo, cpf },
       },
     })

@@ -20,7 +20,6 @@ const DIAS_LABEL = {
   sexta: 'Sex', sabado: 'Sáb', domingo: 'Dom',
 }
 
-// Gera os horários de 1h em 1h, das 7h às 20h (último bloco: 20h às 21h).
 function gerarSlots() {
   const slots = []
   for (let h = 7; h <= 20; h++) {
@@ -69,7 +68,6 @@ export default function PerfilProfissional() {
       })
   }, [id])
 
-  // Toda vez que a data muda, busca os blocos já ocupados nesse dia (agenda real da profissional).
   useEffect(() => {
     setSlotEscolhido(null)
 

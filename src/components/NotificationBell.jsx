@@ -26,8 +26,6 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!session?.user?.id) return
     carregar()
-
-    // Escuta novas notificações chegando em tempo real.
     const canal = supabase
       .channel('notificacoes-usuario')
       .on(
